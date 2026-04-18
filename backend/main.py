@@ -107,30 +107,21 @@ def _mask_api_key(api_key: str | None) -> str:
 
 
 # =====================================================================
-# API ENDPOINTS (Health & Analysis)
+# API ENDPOINTS (All at the top for priority matching)
 # =====================================================================
+# IMPORTANT: These must be defined BEFORE static mounts and catch-all
+# FastAPI matches routes in order of definition
 
-@app.get("/")
-async def liveness():
-    """
-    Liveness Probe - Cloud Run Health Check Endpoint.
-    
-    Cloud Run pings this immediately after container startup.
-    Returns quickly to pass health checks and prevent timeout failures.
-    
-    Returns:
-        {"status": "alive"} - Indicates the API is running
-    """
-    return {"status": "alive"}
-
-
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """
     Health Check Endpoint - Full system status.
     
     Returns detailed information about Gemini API connectivity,
     API key configuration, and deployment environment.
+    
+    Cloud Run can use this endpoint for health checks if needed.
+    The root "/" is now handled by the React SPA catch-all.
     
     Returns:
         dict: Status information including Gemini connection state,
@@ -150,7 +141,7 @@ async def health_check():
     }
 
 
-@app.get("/test-connection")
+@app.get("/api/test-connection")
 async def test_connection():
     """
     Connection Test Endpoint - Verify Gemini API connectivity.
