@@ -1,75 +1,115 @@
 # NutriScan AI
 
-**NutriScan AI** has been upgraded into a production-quality Food & Health assistant. With a robust React and FastAPI architecture, it provides strong personalization, contextual AI analysis using Gemini 1.5 Flash, and a professional, SaaS-inspired UI/UX.
+NutriScan AI is a meal-photo nutrition assistant built with React, FastAPI, and Google Gemini. It analyzes food images, estimates nutrition, scores meal health, and gives personalized guidance based on the user's goals and daily intake.
 
-## 🌟 Features
+## Features
 
-- **Personalized Context-Aware AI**: The AI considers your goal (weight loss/muscle gain), diet type, health conditions (like low sodium), and your cumulative daily intake when generating advice.
-- **Daily Tracker & Smart Alerts**: Real-time progress bars against your personalized goals with dynamic warnings (e.g., high sodium or low protein).
-- **User Profile System**: Stores your dietary preferences locally without requiring an account.
-- **Clean SaaS UI/UX**: A minimal, structured two-column layout focusing on clarity, typography, and accessibility.
-- **Enhanced Meal History**: Persistent `localStorage` history featuring average health scores and insight tracking over time.
+- Image-based meal analysis with Gemini vision
+- Personalized advice using profile and daily intake context
+- Backend health panel with live Gemini status reporting
+- Staged analysis progress UI so scans do not feel stuck
+- Local meal history stored in `localStorage`
+- Debug-friendly API diagnostics for upload and Gemini troubleshooting
 
-## 🛠️ Tech Stack
+## Product notes
 
-- **Frontend**: React (Vite), Lucide Icons, Pure CSS (SaaS UI logic).
-- **Backend**: FastAPI (Python 3.9), Async Endpoints, Pydantic Schema.
-- **AI Engine**: Google Gemini 1.5 Flash Vision.
-- **Deployment**: Multi-stage Dockerfile (Google Cloud Run compatible).
+- Nutrition values are AI estimates based on the visible meal, not laboratory measurements.
+- Confidence and visual confirmation are included to help users judge how trustworthy a scan is.
+- Pre-flight Gemini visual debugging is available, but disabled by default to reduce quota usage.
 
-## 🚀 Setup Instructions
+## Tech stack
+
+- Frontend: React + Vite
+- Backend: FastAPI + Pydantic
+- AI: Google Gemini `gemini-2.5-flash`
+- Deployment: Docker + Google Cloud Run
+
+## Local setup
 
 ### Prerequisites
+
 - Python 3.9+
 - Node.js 18+
-- Google Gemini API Key
+- A Gemini API key
 
-### 1. Backend Setup
+### Backend
+
 ```bash
 python -m venv venv
-# Activate your venv
+# activate the virtual environment
 pip install -r backend/requirements.txt
-
-# Create a .env file and add:
-# GEMINI_API_KEY=your_google_ai_studio_key
 ```
 
-### 2. Frontend Setup
+Create `backend/.env`:
+
+```env
+GEMINI_API_KEY=your_google_ai_studio_key
+GEMINI_MODEL=gemini-2.5-flash
+ENABLE_GEMINI_PREFLIGHT_DEBUG=false
+```
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-npm run build
 cd ..
 ```
 
-### 3. Run the Application
+### Run locally
+
+Backend:
+
 ```bash
 uvicorn backend.main:app --reload
 ```
-Access the application at `http://localhost:8000`.
 
-## ☁️ Deployment (Google Cloud Run)
+Frontend:
 
-Deploy using the provided multi-stage `Dockerfile`:
 ```bash
-gcloud run deploy nutriscan-ai --source . --env-vars-file env.yaml
+cd frontend
+npm run dev
 ```
 
-## 🔒 Security
+Local URLs:
 
-- **Environment Secrets**: API keys are isolated via python-dotenv and environment configurations.
-- **Client-Side Safety**: No API keys are exposed to the browser.
-- **File Validation**: Enforced image/mime type validation.
+- Frontend: `http://127.0.0.1:5173/`
+- Backend health: `http://127.0.0.1:8000/health`
+- Backend test connection: `http://127.0.0.1:8000/test-connection`
 
-## ♿ Accessibility
+## Google Cloud Run deployment
 
-- Uses rigorous semantic HTML elements and grid layouts.
-- Dynamic ARIA labels are added to interactive buttons and forms.
-- The neutral palette (emerald, slate, clean white) ensures WCAG high-contrast standards.
+The repository includes a multi-stage `Dockerfile` that builds the frontend and serves the bundled app from FastAPI.
 
-## 🧪 Testing
+Build locally:
 
-A complete `pytest` suite is included to ensure the `/analyze` endpoint validates both async files and profile form payloads correctly.
 ```bash
-pytest
+npm --prefix frontend run build
+```
+
+Deploy to Cloud Run:
+
+```bash
+gcloud run deploy nutriscan-ai \
+  --source . \
+  --region YOUR_REGION \
+  --allow-unauthenticated \
+  --set-env-vars GEMINI_API_KEY=YOUR_KEY,GEMINI_MODEL=gemini-2.5-flash,ENABLE_GEMINI_PREFLIGHT_DEBUG=false
+```
+
+For production, prefer Secret Manager instead of committing or scripting plaintext API keys.
+
+## Testing
+
+Backend tests:
+
+```bash
+pytest tests/test_main.py
+```
+
+Frontend tests:
+
+```bash
+cd frontend
+npm test
 ```

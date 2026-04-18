@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 
 class UserProfile(BaseModel):
     goal: str  # weight_loss | muscle_gain | maintain
@@ -23,3 +23,6 @@ class AnalysisResponse(BaseModel):
     primary_concern: str
     advice: str
     meal_type: str  # breakfast | lunch | dinner | snack
+    confidence: float # 0-1
+    visual_confirmation: str
+    analysis_nonce: str

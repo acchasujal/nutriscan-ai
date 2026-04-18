@@ -8,6 +8,7 @@ const NutritionGrid = ({ data }) => {
     { label: 'Carbs', value: data.carbs_g, unit: 'g', icon: Wind, color: '#f59e0b' },
     { label: 'Fat', value: data.fat_g, unit: 'g', icon: Droplets, color: '#10b981' },
     { label: 'Sodium', value: data.sodium_mg, unit: 'mg', icon: AlertCircle, color: '#8b5cf6' },
+    { label: 'Confidence', value: data.confidence ? (data.confidence * 100).toFixed(0) : '--', unit: data.confidence ? '%' : '', icon: Zap, color: '#6366f1' },
   ];
 
   return (
@@ -32,6 +33,11 @@ const NutritionGrid = ({ data }) => {
             <span style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-main)' }}>{item.value}</span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.unit}</span>
           </div>
+          {item.label === 'Confidence' && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Lower confidence means the estimate may be less reliable.
+            </span>
+          )}
         </div>
       ))}
     </div>

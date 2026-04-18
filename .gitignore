@@ -24,3 +24,8 @@ env/
 
 # OS
 .DS_Store
+
+# Local tooling
+.codex-logs/
+tmp_debug_images/
+scan_results.log

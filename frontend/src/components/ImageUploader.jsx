@@ -1,7 +1,7 @@
 import React from 'react';
 import { UploadCloud, Camera, Image as ImageIcon } from 'lucide-react';
 
-const ImageUploader = ({ onUpload, loading }) => {
+const ImageUploader = ({ onUpload, loading, progress }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) onUpload(file);
@@ -65,9 +65,31 @@ const ImageUploader = ({ onUpload, loading }) => {
             {loading ? 'Analyzing...' : 'Upload Meal Photo'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Drag and drop or click to browse
+            {loading ? (progress?.label || 'Analyzing your meal...') : 'Drag and drop or click to browse'}
           </p>
         </div>
+
+        {loading && (
+          <div style={{ width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <span>{progress?.label || 'Analyzing your meal...'}</span>
+              <span>{progress?.value || 0}%</span>
+            </div>
+            <div style={{ width: '100%', height: '0.65rem', borderRadius: '999px', backgroundColor: '#dbeafe', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${progress?.value || 0}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)',
+                  transition: 'width 0.35s ease',
+                }}
+              />
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+              Nutrition values are AI estimates based on the visible meal and may vary from actual serving size or recipe.
+            </p>
+          </div>
+        )}
 
         {!loading && (
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }} onClick={e => e.stopPropagation()}>

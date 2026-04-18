@@ -9,10 +9,13 @@ import MealHistory from './components/MealHistory';
 import ProfilePanel from './components/ProfilePanel';
 import DailyTracker from './components/DailyTracker';
 import AlertsPanel from './components/AlertsPanel';
+import BackendHealthPanel from './components/BackendHealthPanel';
+import { analyzeMeal } from './api/analyzeMeal';
 
 function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState({ value: 0, label: 'Preparing image upload...' });
   const [error, setError] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [history, setHistory] = useState([]);
@@ -27,6 +30,47 @@ function App() {
       calculateDailyIntake(parsed);
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  useEffect(() => {
+    if (!loading) {
+      setAnalysisProgress({ value: 0, label: 'Preparing image upload...' });
+      return undefined;
+    }
+
+    const progressPlan = [
+      { threshold: 18, label: 'Uploading image...' },
+      { threshold: 42, label: 'Checking image quality...' },
+      { threshold: 68, label: 'Estimating nutrition...' },
+      { threshold: 88, label: 'Personalizing meal insights...' },
+      { threshold: 95, label: 'Finalizing your result...' },
+    ];
+
+    const interval = setInterval(() => {
+      setAnalysisProgress((current) => {
+        if (current.value >= 95) {
+          return current;
+        }
+
+        const nextValue = Math.min(current.value + Math.max(2, Math.ceil((95 - current.value) / 6)), 95);
+        const nextStep = progressPlan.find((step) => nextValue <= step.threshold) || progressPlan[progressPlan.length - 1];
+
+        return {
+          value: nextValue,
+          label: nextStep.label,
+        };
+      });
+    }, 450);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const calculateDailyIntake = (hist) => {
     // Only calculate for today
@@ -45,27 +89,28 @@ function App() {
   };
 
   const handleAnalyze = async (file) => {
+    console.log(`Starting analysis for file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+    
     setLoading(true);
+    setAnalysisProgress({ value: 8, label: 'Uploading image...' });
     setError(null);
     setResult(null);
-    setImagePreview(URL.createObjectURL(file));
-
-    const formData = new FormData();
-    formData.append('file', file);
-    if (profile) formData.append('profile', JSON.stringify(profile));
-    formData.append('daily_intake', JSON.stringify(dailyIntake));
-
-    try {
-      const response = await fetch('/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze image. Please try again.');
+    setImagePreview((currentPreview) => {
+      if (currentPreview) {
+        URL.revokeObjectURL(currentPreview);
       }
 
-      const data = await response.json();
+      return URL.createObjectURL(file);
+    });
+    console.log('Preparing multipart/form-data request to /analyze with the original File object.');
+
+    try {
+      const data = await analyzeMeal({
+        file,
+        profile,
+        dailyIntake,
+      });
+      setAnalysisProgress({ value: 100, label: 'Analysis complete.' });
       
       const resultWithMeta = {
         ...data,
@@ -88,6 +133,9 @@ function App() {
   };
 
   const reset = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setResult(null);
     setError(null);
     setImagePreview(null);
@@ -123,7 +171,7 @@ function App() {
           )}
 
           {!result ? (
-            <ImageUploader onUpload={handleAnalyze} loading={loading} />
+            <ImageUploader onUpload={handleAnalyze} loading={loading} progress={analysisProgress} />
           ) : (
             <div className="animate-fade-in stack">
               <div className="flex-between">
@@ -150,13 +198,14 @@ function App() {
                 <NutritionGrid data={result} />
               </div>
 
-              <AdviceCard concern={result.primary_concern} advice={result.advice} />
+              <AdviceCard concern={result.primary_concern} advice={result.advice} visualConfirmation={result.visual_confirmation} confidence={result.confidence} />
             </div>
           )}
         </div>
 
         {/* RIGHT COLUMN: Profile, Tracking, History */}
         <div className="stack">
+          <BackendHealthPanel />
           <AlertsPanel intake={dailyIntake} profile={profile} />
           <DailyTracker intake={dailyIntake} profile={profile} />
           <ProfilePanel onProfileUpdate={handleProfileUpdate} />
