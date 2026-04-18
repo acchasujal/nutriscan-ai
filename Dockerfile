@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Backend & final image
-FROM python:3.9-slim
+FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
@@ -25,14 +25,10 @@ COPY backend/ ./backend/
 # Copy built frontend assets from Stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Copy entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 # Expose port (Cloud Run will set PORT environment variable)
 EXPOSE 8080
 ENV PORT=8080
 
-# Use exec form for proper signal handling in Cloud Run
-# The entrypoint script handles PORT environment variable
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Use shell form to expand PORT environment variable at runtime
+# Cloud Run health checks will ping / endpoint
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]

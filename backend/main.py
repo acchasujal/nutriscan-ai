@@ -53,6 +53,16 @@ async def startup_event():
     logger.info("="*60)
 
 
+@app.get("/")
+async def liveness():
+    """Liveness probe for Cloud Run health checks.
+    
+    Cloud Run immediately pings this endpoint after container startup.
+    Returns quickly to pass health checks and prevent timeout failures.
+    """
+    return {"status": "alive"}
+
+
 def _mask_api_key(api_key: str | None) -> str:
     if not api_key:
         return "missing"

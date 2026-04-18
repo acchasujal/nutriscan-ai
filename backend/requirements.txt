@@ -1,9 +1,22 @@
+# Core FastAPI & Web Server
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
+
+# Google AI Integration
 google-genai==0.4.2
+
+# File Upload Support (required for image uploads)
 python-multipart==0.0.6
+
+# Data Validation
 pydantic==2.6.1
+
+# Testing
 pytest==7.4.4
 httpx==0.25.2
+
+# Environment Configuration
 python-dotenv==1.0.0
+
+# Image Processing
 pillow==10.1.0
