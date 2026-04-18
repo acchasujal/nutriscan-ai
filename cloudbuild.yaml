@@ -1,0 +1,25 @@
+steps:
+  # 1. Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/nutriscan-ai', '.']
+
+  # 2. Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/nutriscan-ai']
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'nutriscan-ai'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/nutriscan-ai'
+      - '--region'
+      - 'asia-south1'
+      - '--allow-unauthenticated'
+
+# This specific block fixes your "invalid argument" error
+options:
+  logging: CLOUD_LOGGING_ONLY
