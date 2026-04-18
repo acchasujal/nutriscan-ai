@@ -45,7 +45,8 @@ export function buildAnalyzeMealRequest({
 export async function checkBackendHealth() {
   try {
     const apiBaseUrl = resolveApiBaseUrl();
-    const res = await fetch(`${apiBaseUrl}/health`);
+    // Updated endpoint: /health → /api/health (matches backend routing)
+    const res = await fetch(`${apiBaseUrl}/api/health`);
     if (!res.ok) {
       return {
         status: "error",
@@ -54,7 +55,9 @@ export async function checkBackendHealth() {
         gemini_message: "Backend health check failed.",
       };
     }
-    return await res.json();
+    const data = await res.json();
+    // Ensure status is normalized
+    return data;
   } catch (err) {
     console.error("Health check failed", err);
     return {

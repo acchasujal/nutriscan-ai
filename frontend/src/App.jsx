@@ -9,7 +9,7 @@ import MealHistory from './components/MealHistory';
 import ProfilePanel from './components/ProfilePanel';
 import DailyTracker from './components/DailyTracker';
 import AlertsPanel from './components/AlertsPanel';
-import BackendHealthPanel from './components/BackendHealthPanel';
+import DebugPanel from './components/DebugPanel';
 import { analyzeMeal } from './api/analyzeMeal';
 
 function App() {
@@ -205,13 +205,15 @@ function App() {
 
         {/* RIGHT COLUMN: Profile, Tracking, History */}
         <div className="stack">
-          <BackendHealthPanel />
           <AlertsPanel intake={dailyIntake} profile={profile} />
           <DailyTracker intake={dailyIntake} profile={profile} />
           <ProfilePanel onProfileUpdate={handleProfileUpdate} />
           <MealHistory history={history} onSelect={(meal) => { setResult(meal); window.scrollTo(0,0); }} />
         </div>
       </main>
+
+      {/* Debug Panel - Fixed in bottom corner */}
+      <DebugPanel />
     </>
   );
 }
