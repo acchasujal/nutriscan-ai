@@ -25,9 +25,14 @@ COPY backend/ ./backend/
 # Copy built frontend assets from Stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose port and run application
-EXPOSE 8080
-ENV PORT 8080
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-# Command to run uvicorn
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Expose port (Cloud Run will set PORT environment variable)
+EXPOSE 8080
+ENV PORT=8080
+
+# Use exec form for proper signal handling in Cloud Run
+# The entrypoint script handles PORT environment variable
+ENTRYPOINT ["/app/entrypoint.sh"]

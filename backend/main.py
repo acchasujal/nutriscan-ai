@@ -14,7 +14,11 @@ load_dotenv()
 from .gemini_client import GeminiClient
 from .schema import AnalysisResponse, UserProfile, DailyIntakeSummary
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="NutriScan AI API")
@@ -28,6 +32,25 @@ app.add_middleware(
 
 gemini = GeminiClient()
 ENABLE_GEMINI_PREFLIGHT_DEBUG = os.environ.get("ENABLE_GEMINI_PREFLIGHT_DEBUG", "false").lower() == "true"
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Log startup configuration for Cloud Run diagnostics."""
+    port = os.environ.get("PORT", "8080")
+    host = "0.0.0.0"
+    api_key_status = "configured" if os.environ.get("GEMINI_API_KEY") else "missing"
+    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    
+    logger.info("="*60)
+    logger.info("NutriScan AI API Starting")
+    logger.info("="*60)
+    logger.info(f"Host: {host}")
+    logger.info(f"Port: {port}")
+    logger.info(f"Gemini Model: {gemini_model}")
+    logger.info(f"Gemini API Key: {api_key_status}")
+    logger.info(f"Preflight Debug: {ENABLE_GEMINI_PREFLIGHT_DEBUG}")
+    logger.info("="*60)
 
 
 def _mask_api_key(api_key: str | None) -> str:
