@@ -2,6 +2,7 @@ import os
 import logging
 from datetime import datetime, timezone
 from uuid import uuid4
+from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -23,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="NutriScan AI API")
 
+# =====================================================================
+# MIDDLEWARE & CONFIGURATION
+# =====================================================================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,6 +38,29 @@ app.add_middleware(
 gemini = GeminiClient()
 ENABLE_GEMINI_PREFLIGHT_DEBUG = os.environ.get("ENABLE_GEMINI_PREFLIGHT_DEBUG", "false").lower() == "true"
 
+# =====================================================================
+# PATH RESOLUTION: Determine frontend distribution directory
+# =====================================================================
+# Resolve paths dynamically relative to this file's location
+# __file__ = /app/backend/main.py (in Docker)
+# Frontend dist = /app/frontend/dist (in Docker, per Dockerfile)
+# Path from backend to frontend: ../frontend/dist
+
+BACKEND_DIR = Path(__file__).resolve().parent  # /app/backend
+PROJECT_ROOT = BACKEND_DIR.parent  # /app
+FRONTEND_DIST_DIR = PROJECT_ROOT / "frontend" / "dist"
+FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+FRONTEND_INDEX_PATH = FRONTEND_DIST_DIR / "index.html"
+
+logger.info(f"Backend directory: {BACKEND_DIR}")
+logger.info(f"Project root: {PROJECT_ROOT}")
+logger.info(f"Frontend dist: {FRONTEND_DIST_DIR}")
+logger.info(f"Frontend assets: {FRONTEND_ASSETS_DIR}")
+logger.info(f"Frontend index: {FRONTEND_INDEX_PATH}")
+
+# =====================================================================
+# STARTUP EVENTS
+# =====================================================================
 
 @app.on_event("startup")
 async def startup_event():
@@ -50,8 +78,15 @@ async def startup_event():
     logger.info(f"Gemini Model: {gemini_model}")
     logger.info(f"Gemini API Key: {api_key_status}")
     logger.info(f"Preflight Debug: {ENABLE_GEMINI_PREFLIGHT_DEBUG}")
+    logger.info(f"Frontend served from: {FRONTEND_DIST_DIR}")
+    logger.info(f"Frontend index available: {FRONTEND_INDEX_PATH.exists()}")
+    logger.info(f"Frontend assets available: {FRONTEND_ASSETS_DIR.exists()}")
     logger.info("="*60)
 
+
+# =====================================================================
+# API ENDPOINTS (defined before static file mounts for priority)
+# =====================================================================
 
 @app.get("/")
 async def liveness():
@@ -138,6 +173,7 @@ async def analyze_food(
         logger.error("Error processing image in endpoint: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/health")
 async def health_check():
     api_key_loaded = bool(os.environ.get("GEMINI_API_KEY"))
@@ -171,13 +207,63 @@ async def test_connection():
         "cloud_run_compatible": True,
     }
 
-frontend_path = os.path.join(os.getcwd(), "frontend", "dist")
-if os.path.exists(frontend_path):
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
+
+# =====================================================================
+# STATIC FILE SERVING & REACT ROUTER SUPPORT
+# =====================================================================
+
+# Mount assets directory if it exists (for CSS, JS, images)
+if FRONTEND_ASSETS_DIR.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(FRONTEND_ASSETS_DIR)),
+        name="assets"
+    )
+    logger.info("✓ Mounted /assets from frontend/dist/assets")
+else:
+    logger.warning("⚠ Frontend assets directory not found: %s", FRONTEND_ASSETS_DIR)
+
+# Mount other static files from frontend/dist root (favicon, manifest, etc.)
+if FRONTEND_DIST_DIR.exists():
+    app.mount(
+        "/.well-known",
+        StaticFiles(directory=str(FRONTEND_DIST_DIR)),
+        name="well-known"
+    )
+    logger.info("✓ Mounted /.well-known from frontend/dist")
+else:
+    logger.warning("⚠ Frontend dist directory not found: %s", FRONTEND_DIST_DIR)
 
 
-@app.get("/{full_path:path}")
-async def serve_spa(full_path: str):
-    if os.path.exists(os.path.join(frontend_path, "index.html")):
-        return FileResponse(os.path.join(frontend_path, "index.html"))
-    return {"message": "Development mode: Frontend not built yet."}
+# =====================================================================
+# CATCH-ALL ROUTE FOR REACT ROUTER (SPA SUPPORT)
+# =====================================================================
+
+@app.get("/{rest_of_path:path}")
+async def serve_spa(rest_of_path: str):
+    """
+    Catch-all route that serves index.html for React Router.
+    
+    This allows React Router to handle client-side routing for all paths
+    that don't match API endpoints or static files.
+    
+    Examples:
+    - GET /dashboard → serves index.html
+    - GET /profile/settings → serves index.html
+    - GET /assets/style.css → handled by StaticFiles mount
+    - GET /analyze → handled by API endpoint
+    """
+    if FRONTEND_INDEX_PATH.exists():
+        logger.debug(f"Serving SPA index.html for path: /{rest_of_path}")
+        return FileResponse(
+            path=str(FRONTEND_INDEX_PATH),
+            media_type="text/html"
+        )
+    else:
+        logger.warning("Frontend index.html not found: %s", FRONTEND_INDEX_PATH)
+        return {
+            "error": "Frontend not found",
+            "message": "The frontend build (frontend/dist/index.html) is not available. Build the frontend with 'npm run build' in the frontend directory.",
+            "path": str(FRONTEND_INDEX_PATH),
+            "dev_mode": True,
+        }
